@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EPPL Today &amp; Tomorrow</title>
+<style>
+  :root{
+    --navy: #16233F;
+    --navy-deep: #0D1830;
+    --gold: #C6A03C;
+    --gold-soft: #E4CD8B;
+    --cream: #F6F1E4;
+    --ink: #22242B;
+    --line: rgba(198,160,60,0.35);
+  }
+  *{ box-sizing:border-box; }
+  html,body{
+    margin:0; padding:0; width:100vw; height:100vh;
+    overflow:hidden; background:var(--navy-deep);
+    font-family: 'Georgia', 'Times New Roman', serif;
+    cursor:none;
+  }
+  #app{ position:relative; width:100vw; height:100vh; }
+
+  /* ---------- header ---------- */
+  header{
+    position:absolute; top:0; left:0; right:0; height:11vh;
+    background:var(--navy);
+    display:flex; align-items:center; justify-content:space-between;
+    padding:0 clamp(24px,3vw,60px);
+    border-bottom:3px solid var(--gold);
+    z-index:10;
+  }
+  .brand{ display:flex; align-items:center; gap:18px; }
+  .brand svg{ width:clamp(32px,3.2vw,52px); height:clamp(32px,3.2vw,52px); }
+  .brand-text{ color:var(--cream); }
+  .brand-text .name{ font-size:clamp(18px,1.9vw,30px); letter-spacing:0.04em; font-weight:700; }
+  .brand-text .sub{ font-size:clamp(11px,1vw,16px); color:var(--gold-soft); letter-spacing:0.14em; text-transform:uppercase; }
+  .clock{ text-align:right; color:var(--cream); }
+  .clock .time{ font-size:clamp(24px,2.6vw,42px); font-weight:700; font-variant-numeric: tabular-nums; }
+  .clock .date{ font-size:clamp(12px,1.1vw,18px); color:var(--gold-soft); letter-spacing:0.06em; }
+
+  /* ---------- stage (slides live here) ---------- */
+  #stage{ position:absolute; top:11vh; left:0; right:0; bottom:0; }
+  .slide{
+    position:absolute; inset:0; opacity:0; transition:opacity 0.9s ease;
+    pointer-events:none;
+  }
+  .slide.active{ opacity:1; }
+
+  /* ---------- schedule slide ---------- */
+  .schedule{ background:var(--cream); display:flex; flex-direction:column; padding: clamp(20px,2.4vh,40px) clamp(30px,4vw,70px); }
+  .schedule-cols{ flex:1; display:flex; gap:clamp(20px,3vw,50px); min-height:0; }
+  .col{ flex:1; display:flex; flex-direction:column; min-width:0; }
+  .col-head{
+    display:flex; align-items:baseline; gap:14px;
+    border-bottom:3px solid var(--navy); padding-bottom:10px; margin-bottom:14px;
+  }
+  .col-head .label{ font-size:clamp(22px,2.6vw,40px); font-weight:700; color:var(--navy); letter-spacing:0.02em; }
+  .col-head .count{ font-size:clamp(13px,1.2vw,18px); color:#6b6250; font-style:italic; }
+  .events-clip{ flex:1; position:relative; overflow:hidden; }
+  .events-track{ display:flex; flex-direction:column; gap:clamp(10px,1.4vh,20px); position:absolute; top:0; left:0; right:0; }
+  .event{
+    display:flex; gap:clamp(14px,1.6vw,26px); align-items:flex-start;
+    border-left:5px solid var(--gold); padding: 6px 0 6px clamp(12px,1.4vw,20px);
+  }
+  .event .time{
+    flex:0 0 auto; width:clamp(80px,8vw,130px); color:var(--navy); font-weight:700;
+    font-size:clamp(14px,1.5vw,22px); line-height:1.15;
+  }
+  .event .info{ flex:1; min-width:0; }
+  .event .pname{ font-size:clamp(16px,1.8vw,26px); font-weight:700; color:var(--ink); line-height:1.2; }
+  .event .meta{ font-size:clamp(12px,1.1vw,16px); color:#5a5747; margin-top:2px; }
+  .badge{
+    display:inline-block; font-size:clamp(10px,0.85vw,13px); font-weight:700;
+    padding:2px 9px; border-radius:20px; margin-left:8px; letter-spacing:0.03em;
+    background:var(--navy); color:var(--gold-soft); vertical-align:middle;
+  }
+  .empty-note{ color:#8a8168; font-style:italic; font-size:clamp(14px,1.4vw,20px); padding:20px 0; }
+
+  /* ---------- promo slide ---------- */
+  .promo{ background:var(--navy-deep); display:flex; align-items:center; justify-content:center; }
+  .promo img{
+    max-width:92%; max-height:78%; object-fit:contain;
+    box-shadow: 0 0 0 6px var(--gold), 0 20px 60px rgba(0,0,0,0.5);
+    border-radius:4px;
+  }
+  .promo-caption{
+    position:absolute; left:0; right:0; bottom:0;
+    background:linear-gradient(180deg, rgba(13,24,48,0) 0%, rgba(13,24,48,0.92) 40%);
+    padding: 8vh clamp(30px,4vw,70px) clamp(20px,3vh,40px);
+    text-align:center;
+  }
+  .promo-caption .pname{ color:var(--cream); font-size:clamp(22px,3vw,44px); font-weight:700; }
+  .promo-caption .meta{ color:var(--gold-soft); font-size:clamp(14px,1.6vw,22px); margin-top:6px; letter-spacing:0.03em; }
+
+  /* ---------- footer / debug ---------- */
+  .updated{
+    position:absolute; right:14px; bottom:8px; z-index:20;
+    color:rgba(255,255,255,0.35); font-family:monospace; font-size:11px;
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <header>
+    <div class="brand">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#E4CD8B" stroke-width="1.6"><path d="M4 5.5C4 4.7 4.7 4 5.5 4H11v16H5.5c-.8 0-1.5-.7-1.5-1.5v-13z"/><path d="M20 5.5c0-.8-.7-1.5-1.5-1.5H13v16h5.5c.8 0 1.5-.7 1.5-1.5v-13z"/><path d="M11 4l1 1 1-1"/></svg>
+      <div class="brand-text">
+        <div class="name">Elmwood Park Public Library</div>
+        <div class="sub">Today &amp; Tomorrow at EPPL</div>
+      </div>
+    </div>
+    <div class="clock">
+      <div class="time" id="clockTime">--:--</div>
+      <div class="date" id="clockDate">Loading date…</div>
+    </div>
+  </header>
+
+  <div id="stage"></div>
+  <div class="updated" id="updatedNote"></div>
+
+</div>
+
+<script>
+/* ============ EDIT THESE TWO THINGS ============ */
+const DATA_URL = "https://script.google.com/macros/s/AKfycbxpDSia_eDtOT1_o_G51mWR30vuIPP5kZFuDOog-xStt84VQE4yX1UK1UBeyJv69KO38Q/exec";
+const REFRESH_INTERVAL_MS = 5 * 60 * 1000;   // how often to re-check the sheet (5 min)
+/* ================================================ */
+
+const SCHEDULE_DURATION_MS = 22 * 1000;   // how long the schedule slide stays up before promos start
+const PROMO_DURATION_MS    = 9 * 1000;    // how long each promo image stays up
+const SCROLL_SPEED_PX_SEC  = 35;          // how fast an overflowing column scrolls (lower = slower/easier to read)
+const SCROLL_PAUSE_MS      = 3500;        // pause at top and bottom of a scrolling column before it moves again
+
+let events = [];
+let slides = [];       // built each refresh: array of {type:'schedule'|'promo', ...}
+let slideIndex = 0;
+let slideTimer = null;
+let activeColumnScrolls = [];   // cleanup functions for any running column auto-scrolls
+
+function fmtBadge(text){ return `<span class="badge">${text}</span>`; }
+
+function eventRow(ev){
+  let meta = [];
+  if (ev.room) meta.push(ev.room);
+  if (ev.ageGroup) meta.push(ev.ageGroup);
+  let badges = '';
+  if (String(ev.registration).toLowerCase() === 'yes') badges += fmtBadge('Registration required');
+  if (String(ev.allDay).toLowerCase() === 'yes' || String(ev.allDay).toLowerCase() === 'true') badges += fmtBadge('All day');
+  return `<div class="event">
+      <div class="time">${ev.startTime || ''}${ev.endTime ? '&ndash;<br>' + ev.endTime : ''}</div>
+      <div class="info">
+        <div class="pname">${escapeHtml(ev.name)}${badges}</div>
+        <div class="meta">${escapeHtml(meta.join(' · '))}</div>
+      </div>
+    </div>`;
+}
+
+function escapeHtml(s){
+  return String(s || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+function buildSlides(){
+  const today = events.filter(e => e.day === 'today');
+  const tomorrow = events.filter(e => e.day === 'tomorrow');
+
+  const scheduleSlide = { type:'schedule', today: today, tomorrow: tomorrow };
+
+  const promoSlides = events
+    .filter(e => e.imageUrl)
+    .map(e => ({ type:'promo', event: e }));
+
+  slides = [scheduleSlide, ...promoSlides];
+}
+
+function renderSlide(slide){
+  if (slide.type === 'schedule'){
+    return `<div class="slide schedule">
+      <div class="schedule-cols">
+        <div class="col">
+          <div class="col-head"><span class="label">Today</span><span class="count">${slide.today.length} program${slide.today.length===1?'':'s'}</span></div>
+          <div class="events-clip" data-col="today"><div class="events-track">${slide.today.length ? slide.today.map(eventRow).join('') : '<div class="empty-note">Nothing on the schedule today.</div>'}</div></div>
+        </div>
+        <div class="col">
+          <div class="col-head"><span class="label">Tomorrow</span><span class="count">${slide.tomorrow.length} program${slide.tomorrow.length===1?'':'s'}</span></div>
+          <div class="events-clip" data-col="tomorrow"><div class="events-track">${slide.tomorrow.length ? slide.tomorrow.map(eventRow).join('') : '<div class="empty-note">Nothing on the schedule tomorrow.</div>'}</div></div>
+        </div>
+      </div>
+    </div>`;
+  }
+  const ev = slide.event;
+  const when = (ev.day === 'today' ? 'Today' : 'Tomorrow') + (ev.startTime ? ' · ' + ev.startTime : '');
+  return `<div class="slide promo">
+    <img src="${ev.imageUrl}" alt="${escapeHtml(ev.name)}">
+    <div class="promo-caption">
+      <div class="pname">${escapeHtml(ev.name)}</div>
+      <div class="meta">${escapeHtml(when)}${ev.room ? ' · ' + escapeHtml(ev.room) : ''}</div>
+    </div>
+  </div>`;
+}
+
+function setupColumnScroll(clipEl){
+  const track = clipEl.querySelector('.events-track');
+  if (!track) return null;
+  const overflow = track.scrollHeight - clipEl.clientHeight;
+  if (overflow <= 4) return null;   // fits fine, no scrolling needed
+
+  const scrollMs = Math.max(overflow / SCROLL_SPEED_PX_SEC, 4) * 1000;
+  let cancelled = false;
+  let timer = null;
+
+  function toTop(){
+    if (cancelled) return;
+    track.style.transition = 'none';
+    track.style.transform = 'translateY(0)';
+    void track.offsetHeight; // force reflow so the next transition actually animates
+    timer = setTimeout(toBottom, SCROLL_PAUSE_MS);
+  }
+  function toBottom(){
+    if (cancelled) return;
+    track.style.transition = `transform ${scrollMs}ms linear`;
+    track.style.transform = `translateY(-${overflow}px)`;
+    timer = setTimeout(() => { if (!cancelled) timer = setTimeout(toTop, SCROLL_PAUSE_MS); }, scrollMs);
+  }
+
+  toTop();
+  return () => { cancelled = true; clearTimeout(timer); };
+}
+
+function advanceSlide(){
+  slideIndex = (slideIndex + 1) % slides.length;
+  showSlide(slideIndex);
+}
+
+function showSlide(i){
+  activeColumnScrolls.forEach(cleanup => cleanup());
+  activeColumnScrolls = [];
+  clearTimeout(slideTimer);
+
+  const stage = document.getElementById('stage');
+  stage.innerHTML = renderSlide(slides[i]);
+  requestAnimationFrame(() => {
+    const el = stage.querySelector('.slide');
+    if (el) el.classList.add('active');
+
+    if (slides[i].type !== 'schedule'){
+      slideTimer = setTimeout(advanceSlide, PROMO_DURATION_MS);
+      return;
+    }
+
+    setTimeout(() => {
+      let neededMs = SCHEDULE_DURATION_MS;
+      stage.querySelectorAll('.events-clip').forEach(clipEl => {
+        const cleanup = setupColumnScroll(clipEl);
+        if (cleanup){
+          activeColumnScrolls.push(cleanup);
+          const track = clipEl.querySelector('.events-track');
+          const overflow = track.scrollHeight - clipEl.clientHeight;
+          const scrollMs = Math.max(overflow / SCROLL_SPEED_PX_SEC, 4) * 1000;
+          neededMs = Math.max(neededMs, SCROLL_PAUSE_MS * 2 + scrollMs);
+        }
+      });
+      slideTimer = setTimeout(advanceSlide, neededMs);
+    }, 150);
+  });
+}
+
+async function refreshData(){
+  try{
+    const res = await fetch(DATA_URL, { cache:'no-store' });
+    if (!res.ok) throw new Error('bad response ' + res.status);
+    const data = await res.json();
+    events = data.events || [];
+    buildSlides();
+    slideIndex = 0;
+    document.getElementById('updatedNote').textContent = 'updated ' + new Date().toLocaleTimeString();
+    showSlide(0);
+  }catch(err){
+    document.getElementById('updatedNote').textContent = 'last successful update: ' + (document.getElementById('updatedNote').textContent.replace('updated ','') || 'never') + ' (refresh failed)';
+    console.error('Kiosk data refresh failed:', err);
+    if (slides.length === 0){ buildSlides(); showSlide(0); }
+  }
+}
+
+function tickClock(){
+  const now = new Date();
+  document.getElementById('clockTime').textContent = now.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'});
+  document.getElementById('clockDate').textContent = now.toLocaleDateString([], {weekday:'long', month:'long', day:'numeric'});
+}
+
+tickClock();
+setInterval(tickClock, 1000);
+refreshData();
+setInterval(refreshData, REFRESH_INTERVAL_MS);
+</script>
+</body>
+</html>
