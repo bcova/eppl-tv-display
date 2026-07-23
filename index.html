@@ -173,7 +173,7 @@ let promoIndex = 0;
 let promoTimer = null;
 let dayIndex = 0;
 let dayTimer = null;
-let activeColumnScrolls = [];
+let dayScrollCleanups = [null, null];
 
 function fmtBadge(text, kind){
   const icon = kind === 'reg'
@@ -189,8 +189,7 @@ function eventRow(ev){
   let badges = '';
   if (String(ev.registration).toLowerCase() === 'yes') badges += fmtBadge('Registration required', 'reg');
   const isAllDay = String(ev.allDay).toLowerCase() === 'yes' || String(ev.allDay).toLowerCase() === 'true';
-  if (isAllDay) badges += fmtBadge('All day', 'allday');
-  const timeHtml = isAllDay ? '' : `${ev.startTime || ''}${ev.endTime ? '&ndash;<br>' + ev.endTime : ''}`;
+  const timeHtml = isAllDay ? 'All day' : `${ev.startTime || ''}${ev.endTime ? '&ndash;<br>' + ev.endTime : ''}`;
   return `<div class="event">
       <div class="time">${timeHtml}</div>
       <div class="info">
@@ -233,13 +232,40 @@ function setupColumnScroll(clipEl){
   return () => { cancelled = true; clearTimeout(timer); };
 }
 
+function activateDayScroll(index){
+  const stage = document.getElementById('stage');
+  const slides = stage.querySelectorAll('.day-slide');
+  const clipEl = slides[index] ? slides[index].querySelector('.events-clip') : null;
+  if (!clipEl) return;
+  const cleanup = setupColumnScroll(clipEl);
+  if (cleanup) dayScrollCleanups[index] = cleanup;
+}
+
+function deactivateDayScroll(index){
+  if (dayScrollCleanups[index]) {
+    dayScrollCleanups[index]();
+    dayScrollCleanups[index] = null;
+  }
+  const stage = document.getElementById('stage');
+  const slides = stage.querySelectorAll('.day-slide');
+  const clipEl = slides[index] ? slides[index].querySelector('.events-clip') : null;
+  if (clipEl) {
+    const track = clipEl.querySelector('.events-track');
+    if (track) { track.style.transition = 'none'; track.style.transform = 'translateY(0)'; }
+  }
+}
+
 function applyDayIndex(){
   const track = document.getElementById('dayTrack');
   if (track) track.style.transform = `translateX(-${dayIndex * 50}%)`;
+  deactivateDayScroll(dayIndex === 0 ? 1 : 0);
+  activateDayScroll(dayIndex);
 }
 
 function startDaySwitcher(){
   clearInterval(dayTimer);
+  dayScrollCleanups.forEach(cleanup => { if (cleanup) cleanup(); });
+  dayScrollCleanups = [null, null];
   dayIndex = 0;
   applyDayIndex();
   dayTimer = setInterval(() => {
@@ -298,9 +324,9 @@ function startPromoCarousel(){
 }
 
 function renderLayout(){
-  activeColumnScrolls.forEach(cleanup => cleanup());
-  activeColumnScrolls = [];
   clearInterval(dayTimer);
+  dayScrollCleanups.forEach(cleanup => { if (cleanup) cleanup(); });
+  dayScrollCleanups = [null, null];
 
   const stage = document.getElementById('stage');
   const hasPromos = promos.length > 0;
@@ -323,15 +349,8 @@ function renderLayout(){
     ${hasPromos ? '<div class="promo-card"><div class="promo-panel" id="promoPanel" style="width:100%;height:100%;position:relative;"></div></div>' : ''}
   `;
 
-  setTimeout(() => {
-    stage.querySelectorAll('.events-clip').forEach(clipEl => {
-      const cleanup = setupColumnScroll(clipEl);
-      if (cleanup) activeColumnScrolls.push(cleanup);
-    });
-  }, 150);
-
   startPromoCarousel();
-  startDaySwitcher();
+  setTimeout(startDaySwitcher, 150);
 }
 
 async function refreshData(){
