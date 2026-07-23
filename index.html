@@ -184,13 +184,15 @@ function fmtBadge(text, kind){
 
 function eventRow(ev){
   let meta = [];
-  if (ev.room) meta.push(ev.room);
+  if (ev.room && ev.room.toString().trim().toUpperCase() !== 'N/A') meta.push(ev.room);
   if (ev.ageGroup) meta.push(ev.ageGroup);
   let badges = '';
   if (String(ev.registration).toLowerCase() === 'yes') badges += fmtBadge('Registration required', 'reg');
-  if (String(ev.allDay).toLowerCase() === 'yes' || String(ev.allDay).toLowerCase() === 'true') badges += fmtBadge('All day', 'allday');
+  const isAllDay = String(ev.allDay).toLowerCase() === 'yes' || String(ev.allDay).toLowerCase() === 'true';
+  if (isAllDay) badges += fmtBadge('All day', 'allday');
+  const timeHtml = isAllDay ? '' : `${ev.startTime || ''}${ev.endTime ? '&ndash;<br>' + ev.endTime : ''}`;
   return `<div class="event">
-      <div class="time">${ev.startTime || ''}${ev.endTime ? '&ndash;<br>' + ev.endTime : ''}</div>
+      <div class="time">${timeHtml}</div>
       <div class="info">
         <div class="pname">${escapeHtml(ev.name)}</div>
         <div class="meta">${escapeHtml(meta.join(' · '))}</div>
